@@ -4,13 +4,12 @@ import com.github.tototoshi.csv.*
 import org.nspl.*
 import org.nspl.awtrenderer.*
 import org.nspl.data.HistogramData
+
 //import org.xchart.QuickChart
 //import org.xchart.Series
 //import org.xchart.SwingWrapper
 
 import java.io.File
-
-
 
 implicit object MyFormat extends DefaultCSVFormat {
   override val delimiter = ';'
@@ -31,6 +30,10 @@ object App {
     println(frecuenciaGolMinuto(contentFile))
     println(equiposxTorneo(contentFile))
     println(golesMundial(contentFile))
+    println(golesxPenal(contentFile))
+    println(numDorsalDelantero(contentFile2))
+    println(freqDorsalDefensa(contentFile2))
+    println(freqJugadorNombre(contentFile2))
 
     //Función que gráfica los minutos en los que se marcaron más goles mundial 2022
     def frecuenciaGolMinuto(data: List[Map[String, String]]): Unit = {
@@ -48,7 +51,7 @@ object App {
       println(contarGolMinuto)
       //grafica los datos obtenidos
       val lineal = xyplot(
-        contarGolMinuto -> line())(
+        contarGolMinuto -> line(color = Color.GREEN))(
         par
           .xlab("Minutos")
           .ylab("Goles")
@@ -103,6 +106,99 @@ object App {
       pngToFile(new File("C://Personal//ArchivoPIntegrador//GolescMundial3.png"), puntos.build, 2000)
 
     }
+
+    //función que grafica los goles de penal
+    def golesxPenal(data: List[Map[String, String]]): Unit = {
+      val penalgolUru: List[(Double, Double)] = data
+        .filter(_("goals_penalty") != "NA")
+        .filter(row => (row("home_team_name") == "Uruguay" || row("away_team_name") == "Uruguay"))
+        .map(row => (
+          row("tournaments_year").toDouble,
+          row("goals_penalty").toDouble
+        ))
+        .groupBy(_._1)
+        .view.mapValues(_.map(_._2).sum)
+        .toList
+        .sortBy(_._1)
+        .reverse
+        .take(5)
+      println(penalgolUru)
+      val barra = xyplot(
+        penalgolUru -> bar(horizontal = false,
+          width = 2.5,
+          fill = Color.RED)
+      )(
+        par
+          .xlab("Año")
+          .ylab("Goles Penal")
+      )
+        pngToFile(new File("C://Personal//ArchivoPIntegrador//GolesxPenal4.png"), barra.build, 2000)
+    }
+
+    //función que grafica la frecuencia del # del dorsal que llevan los delantero
+    def numDorsalDelantero(data: List[Map[String, String]]): Unit = {
+      val camisetas: List[Double] = data
+        .filter(x => x("squads_position_name") == "forward" && x("squads_shirt_number") != "0")
+        .map(x => x("squads_shirt_number").toDouble)
+      println(camisetas)
+      val histForwardShirtNum = xyplot(HistogramData(camisetas, 10) -> bar(
+        width = 2.5,
+        fill = Color.BLUE))(
+        par
+          .xlab("# Camiseta")
+          .ylab("Frecuencia")
+          .main("Número de camiseta delantera")
+      )
+      val histFordwardShirtNumber = xyplot()
+      pngToFile(new File("C://Personal//ArchivoPIntegrador//GraFrecuenDorsalDelantero5.png"), histForwardShirtNum.build, width = 1200)
+    }
+
+    //función que grafica la frecuencia del # de la camiseta que llevan los defensas
+    def freqDorsalDefensa(data: List[Map[String, String]]): Unit = {
+      val dorsalesjugador = data
+        .filter(row => row("players_defender") == "1" && row("squads_shirt_number") != "0")
+        .map(row => row("squads_shirt_number").toDouble)
+      println(dorsalesjugador)
+      val histogram = xyplot(HistogramData(dorsalesjugador, 10) -> bar(
+        width = 3,
+        fill = Color.GREEN
+      ))(
+        par
+          .xlab("Dorsal Defensa")
+          .ylab("Frq")
+      )
+      pngToFile(new File("C://Personal//ArchivoPIntegrador//FreqDorsalDefensa6.png"), histogram.build, 1000)
+    }
+
+    //Función que grafica las frecuencia de jugadores
+    def freqJugadorNombre(data: List[Map[String, String]]): Unit = {
+      val jugadorConocido: List[(Double, Double)] = data
+        .filter(row => (row("players_given_name") == "Romario" && row("players_family_name") == "Alonso") ||
+          (row("players_given_name") == "Cristiano" && row("players_family_name") == "Ronaldo"))
+        .map(row => (row("squads_shirt_number").toDouble, row("squads_player_id")))
+        .groupBy(identity)
+        .view // Utilizar una vista para mejorar la eficiencia en el cálculo de valores
+        .mapValues(_.size.toDouble)
+        .toList
+        .sortBy(-_._2) // Ordenar en orden descendente por frecuencia
+        .map { case (dorsal, frecuencia) => (dorsal._1, frecuencia) }
+      println(jugadorConocido)
+      val barra = xyplot(
+        jugadorConocido -> bar(horizontal = false,
+          width = 1.5,
+          fill = Color.RED)
+      )(
+        par
+          .xlab("# de dorsal")
+          .ylab("Frecuencias")
+
+      )
+      pngToFile(new File("C://Personal//ArchivoPIntegrador//FreqJugadoNombre7.png"), barra.build, 1000)
+    }
+
+    //Función
+    
+
 
   }
 }
